@@ -1,0 +1,320 @@
+/* ============================================================
+   ТЕМЫ. Цвета вынесены в переменные; тема = переопределение.
+   Активная тема ставится атрибутом data-theme на <html>:
+     (нет атрибута)        -> Светлая (как было)
+     data-theme="dark"     -> Тёмная
+     data-theme="warm"     -> Тёплая (жемчужная)
+     data-theme="mono"     -> Чёрно-белая
+   ============================================================ */
+:root{
+  --bg:#f0f2f5;
+  --text:#333;
+  --card:#fff;
+  --card-shadow:rgba(0,0,0,0.1);
+  --title:#1a1a2e;
+  --muted:#555;
+  --filename:#888;
+  --accent:#534AB7;
+  --accent-hover:#4238a0;
+  --on-accent:#fff;
+  --field-bg:#fff;
+  --field-border:#ddd;
+  --field-text:#333;
+  --filebtn-bg:#f0f2f5;
+  --filebtn-bg-hover:#e0e4ea;
+  --filebtn-border:#ddd;
+  --tab-idle:#888;
+  --tab-hover:#333;
+  --tabline:#f0f2f5;
+  --ok:#2ecc71;
+  --err:#e74c3c;
+}
+
+/* Тёмная — та же фиолетовая тема на тёмном фоне */
+[data-theme="dark"]{
+  --bg:#15151f;
+  --text:#d7d7e0;
+  --card:#1e1e2c;
+  --card-shadow:rgba(0,0,0,0.5);
+  --title:#ffffff;
+  --muted:#9a9ab0;
+  --filename:#7a7a90;
+  --accent:#8b7ff0;
+  --accent-hover:#9d92f5;
+  --on-accent:#15151f;
+  --field-bg:#262636;
+  --field-border:#3a3a4d;
+  --field-text:#e8e8f0;
+  --filebtn-bg:#262636;
+  --filebtn-bg-hover:#32324a;
+  --filebtn-border:#3a3a4d;
+  --tab-idle:#8a8aa0;
+  --tab-hover:#d7d7e0;
+  --tabline:#2a2a3d;
+  --ok:#52d98a;
+  --err:#ff6b5e;
+}
+
+/* Тёплая — жемчужно-белый #eae6ca с тёплым акцентом */
+[data-theme="warm"]{
+  --bg:#eae6ca;
+  --text:#4a4334;
+  --card:#f7f4e6;
+  --card-shadow:rgba(120,100,50,0.18);
+  --title:#3a3322;
+  --muted:#6f6550;
+  --filename:#9a8f72;
+  --accent:#b5703f;
+  --accent-hover:#9c5d30;
+  --on-accent:#fdf6ee;
+  --field-bg:#fffdf5;
+  --field-border:#d9cfa9;
+  --field-text:#4a4334;
+  --filebtn-bg:#efe9d2;
+  --filebtn-bg-hover:#e4dcbf;
+  --filebtn-border:#d3c8a0;
+  --tab-idle:#9a8f72;
+  --tab-hover:#4a4334;
+  --tabline:#ddd3b0;
+  --ok:#5a8a4a;
+  --err:#b5503a;
+}
+
+/* Чёрно-белая — монохром */
+[data-theme="mono"]{
+  --bg:#ffffff;
+  --text:#111;
+  --card:#fff;
+  --card-shadow:rgba(0,0,0,0.15);
+  --title:#000;
+  --muted:#333;
+  --filename:#777;
+  --accent:#111;
+  --accent-hover:#000;
+  --on-accent:#fff;
+  --field-bg:#fff;
+  --field-border:#111;
+  --field-text:#111;
+  --filebtn-bg:#fff;
+  --filebtn-bg-hover:#eee;
+  --filebtn-border:#111;
+  --tab-idle:#888;
+  --tab-hover:#000;
+  --tabline:#e0e0e0;
+  --ok:#000;
+  --err:#000;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 20px;
+    transition: background 0.25s ease, color 0.25s ease;
+}
+
+.container {
+    max-width: 700px;
+    margin: 0 auto;
+    background: var(--card);
+    border-radius: 12px;
+    padding: 30px;
+    box-shadow: 0 4px 20px var(--card-shadow);
+    transition: background 0.25s ease, box-shadow 0.25s ease;
+}
+
+h1 {
+    font-size: 22px;
+    margin-bottom: 24px;
+    color: var(--title);
+    text-align: center;
+}
+
+/* Переключатель тем */
+.theme-switch {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.theme-switch label {
+    font-size: 13px;
+    color: var(--muted);
+    font-weight: 500;
+}
+
+.theme-switch select {
+    padding: 7px 10px;
+    border: 1px solid var(--field-border);
+    border-radius: 8px;
+    background: var(--field-bg);
+    color: var(--field-text);
+    font-size: 13px;
+    cursor: pointer;
+    outline: none;
+    transition: border 0.2s;
+}
+
+.theme-switch select:focus {
+    border-color: var(--accent);
+}
+
+.section {
+    margin-bottom: 20px;
+}
+
+.section-title {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--muted);
+    display: block;
+    margin-bottom: 8px;
+}
+
+.file-upload {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.file-upload input[type="file"] {
+    display: none;
+}
+
+.file-btn {
+    background: var(--filebtn-bg);
+    border: 1px solid var(--filebtn-border);
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text);
+    transition: background 0.2s;
+}
+
+.file-btn:hover {
+    background: var(--filebtn-bg-hover);
+}
+
+#fileName {
+    font-size: 13px;
+    color: var(--filename);
+}
+
+.tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 0;
+    border-bottom: 2px solid var(--tabline);
+}
+
+.tab {
+    padding: 10px 18px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--tab-idle);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: all 0.2s;
+}
+
+.tab:hover {
+    color: var(--tab-hover);
+}
+
+.tab.active {
+    color: var(--accent);
+    border-bottom: 2px solid var(--accent);
+    font-weight: 600;
+}
+
+.tab-content {
+    display: none;
+    padding: 20px 0;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.form-group label {
+    font-size: 13px;
+    color: var(--muted);
+    font-weight: 500;
+}
+
+.form-group input,
+.form-group select {
+    padding: 8px 10px;
+    border: 1px solid var(--field-border);
+    border-radius: 8px;
+    font-size: 13px;
+    outline: none;
+    background: var(--field-bg);
+    color: var(--field-text);
+    transition: border 0.2s;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    border-color: var(--accent);
+}
+
+.apply-btn {
+    width: 100%;
+    padding: 12px;
+    background: var(--accent);
+    color: var(--on-accent);
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 20px;
+    transition: background 0.2s;
+}
+
+.apply-btn:hover {
+    background: var(--accent-hover);
+}
+
+.status {
+    margin-top: 12px;
+    font-size: 13px;
+    text-align: center;
+    min-height: 20px;
+}
+
+.status.success {
+    color: var(--ok);
+}
+
+.status.error {
+    color: var(--err);
+}
+
+.status.loading {
+    color: var(--accent);
+}
