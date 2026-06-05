@@ -97,7 +97,7 @@
                 </div>
                 <div class="form-group">
                     <label>Красная строка (см):</label>
-                    <input type="number" id="firstIndent" value="1.25" step="0.25">
+                    <input type="number" id="firstIndent" value="1.25" step="0.25" min="1">
                 </div>
             </div>
         </div>
@@ -169,8 +169,19 @@
         </div>
 
         <!-- Кнопка применить -->
-        <button class="apply-btn" onclick="applyFormatting()">✔ Применить форматирование</button>
+        <button class="apply-btn" onclick="applyFormatting()">Применить форматирование</button>
         <div id="status" class="status"></div>
+    </div>
+
+    <!-- Скачать шаблон с макросом — отдельная карточка -->
+    <div class="container template-section">
+        <label class="section-title">Офлайн-версия</label>
+        <div class="template-block">
+            <p class="template-desc">Word-документ со встроенным макросом — прототип этого сайта для работы без интернета.</p>
+            <a href="AutoFormatter.docm" download class="apply-btn template-btn">
+                Скачать шаблон с макросом
+            </a>
+        </div>
     </div>
 
     <script src="https://unpkg.com/pizzip@3.1.3/dist/pizzip.js"></script>

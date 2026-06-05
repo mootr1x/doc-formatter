@@ -13,6 +13,23 @@ document.addEventListener('DOMContentLoaded', function () {
   const sel = document.getElementById('themeSelect');
   if (sel) sel.value = saved;
   setTheme(saved);
+
+  // Защита поля "Красная строка" от ввода значений ниже минимума
+  const firstIndentInput = document.getElementById('firstIndent');
+
+  firstIndentInput.addEventListener('blur', function () {
+    const value = parseFloat(this.value);
+    if (isNaN(value) || value < 1) {
+      this.value = 1;
+    }
+  });
+
+  firstIndentInput.addEventListener('input', function () {
+    const value = parseFloat(this.value);
+    if (!isNaN(value) && value < 1) {
+      this.value = 1;
+    }
+  });
 });
 
 /* ---- вкладки ---- */
@@ -482,7 +499,7 @@ async function applyFormatting(){
       fontSize:    parseInt(document.getElementById('fontSize').value) || 14,
       alignment:   document.getElementById('alignment').value,
       lineSpacing: parseFloat(document.getElementById('lineSpacing').value) || 1.5,
-      firstIndent: parseFloat(document.getElementById('firstIndent').value) || 0,
+      firstIndent: Math.max(1, parseFloat(document.getElementById('firstIndent').value) || 1),
       marginTop:    parseFloat(document.getElementById('marginTop').value)    || 2,
       marginBottom: parseFloat(document.getElementById('marginBottom').value) || 2,
       marginLeft:   parseFloat(document.getElementById('marginLeft').value)   || 3,
