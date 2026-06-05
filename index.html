@@ -16,7 +16,8 @@
     </script>
 </head>
 <body>
-    <div class="container">
+    <div class="layout">
+    <div class="container main-form">
         <!-- Переключатель тем -->
         <div class="theme-switch">
             <label for="themeSelect">Тема:</label>
@@ -38,6 +39,17 @@
                 <label for="fileInput" class="file-btn">📁 Выбрать файл .docx</label>
                 <span id="fileName">Файл не выбран</span>
             </div>
+        </div>
+
+        <!-- Форматирование словами -->
+        <div class="section quick-section">
+            <label class="section-title">Форматирование словами</label>
+            <div class="nl-row">
+                <textarea id="nlInput" class="nl-input" rows="2"
+                    placeholder="Опишите словами: «Times New Roman 14, полуторный интервал, по ширине, поля по ГОСТ, нумерация внизу по центру»"></textarea>
+                <button type="button" class="apply-btn nl-apply" onclick="applyFromText()">Применить описание</button>
+            </div>
+            <div id="quickStatus" class="quick-status"></div>
         </div>
 
         <!-- Вкладки -->
@@ -173,6 +185,18 @@
         <div id="status" class="status"></div>
     </div>
 
+    <!-- Карточка с пресетами ГОСТ — справа от основной -->
+    <aside class="container side-card">
+        <label class="section-title">Стандарты ГОСТ</label>
+        <div class="preset-col">
+            <button type="button" class="preset-btn" onclick="applyPreset('gost7_32')">ГОСТ 7.32-2017</button>
+            <button type="button" class="preset-btn" onclick="applyPreset('gost_r_7011')">ГОСТ Р 7.0.11</button>
+            <button type="button" class="preset-btn" onclick="applyPreset('coursework')">Курсовая / реферат</button>
+            <button type="button" class="preset-btn" onclick="applyPreset('plain')">Без нумерации (доклад)</button>
+        </div>
+        <div class="preset-note">Типовые значения — сверяйтесь с методичкой, требования могут отличаться.</div>
+    </aside>
+
     <!-- Скачать шаблон с макросом — отдельная карточка -->
     <div class="container template-section">
         <label class="section-title">Офлайн-версия</label>
@@ -182,6 +206,7 @@
                 Скачать шаблон с макросом
             </a>
         </div>
+    </div>
     </div>
 
     <script src="https://unpkg.com/pizzip@3.1.3/dist/pizzip.js"></script>

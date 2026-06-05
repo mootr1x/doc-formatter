@@ -1,4 +1,3 @@
-
 /* ---- переключение тем ---- */
 function setTheme(theme) {
   if (!theme || theme === 'light') document.documentElement.removeAttribute('data-theme');
@@ -539,5 +538,175 @@ async function applyFormatting(){
     status.className = 'status error';
     status.textContent = 'Ошибка: ' + (err && err.message ? err.message : err);
     console.error(err);
+  }
+}
+
+/* =========================================================================
+   Быстрая настройка: пресеты ГОСТ + разбор форматирования из текста.
+   Оба механизма только ЗАПОЛНЯЮТ форму — применяет всё кнопка
+   «Применить форматирование» (как обычно).
+   ========================================================================= */
+
+/* Пресеты. Значения подставляются в поля формы.
+   pageNumbers — это видимый текст пункта в списке «Нумерация страниц». */
+const PRESETS = {
+  // Отчёт о НИР / реферат. Поля: лево 30мм, право 15мм, верх/низ 20мм; номер внизу по центру.
+  gost7_32:    { label: 'ГОСТ 7.32-2017', fontName: 'Times New Roman', fontSize: 14, lineSpacing: 1.5,
+                 alignment: 'По ширине', firstIndent: 1.25, marginTop: 2, marginBottom: 2, marginLeft: 3, marginRight: 1.5,
+                 pageNumbers: 'Внизу по центру' },
+  // Диссертации/авторефераты — те же базовые метрики.
+  gost_r_7011: { label: 'ГОСТ Р 7.0.11', fontName: 'Times New Roman', fontSize: 14, lineSpacing: 1.5,
+                 alignment: 'По ширине', firstIndent: 1.25, marginTop: 2, marginBottom: 2, marginLeft: 3, marginRight: 1.5,
+                 pageNumbers: 'Внизу по центру' },
+  // Типовая курсовая/реферат вуза — часто номер внизу справа.
+  coursework:  { label: 'Курсовая / реферат', fontName: 'Times New Roman', fontSize: 14, lineSpacing: 1.5,
+                 alignment: 'По ширине', firstIndent: 1.25, marginTop: 2, marginBottom: 2, marginLeft: 3, marginRight: 1.5,
+                 pageNumbers: 'Внизу справа' },
+  // Короткие работы (доклад/эссе) без нумерации, поля по 2 см.
+  plain:       { label: 'Доклад / эссе', fontName: 'Times New Roman', fontSize: 14, lineSpacing: 1.5,
+                 alignment: 'По ширине', firstIndent: 1.25, marginTop: 2, marginBottom: 2, marginLeft: 2, marginRight: 2,
+                 pageNumbers: 'Не добавлять' },
+};
+
+/* ---- установка значений в поля (поддержка input и select) ---- */
+function setVal(id, v){ const el = document.getElementById(id); if (el) el.value = v; }
+function setSelectNumber(id, num){
+  const sel = document.getElementById(id); if (!sel) return;
+  let opt = Array.from(sel.options).find(o => parseFloat((o.value || o.textContent).replace(',', '.')) === num);
+  if (!opt){ opt = new Option(String(num), String(num)); sel.add(opt); }   // нет такого варианта — добавляем
+  sel.value = opt.value;
+}
+function setSelectText(id, text){
+  const sel = document.getElementById(id); if (!sel) return;
+  let opt = Array.from(sel.options).find(o => o.textContent.trim() === text);
+  if (!opt){ opt = new Option(text, text); sel.add(opt); }
+  sel.value = opt.value;
+}
+
+/* применяет нормализованный набор параметров к форме */
+function applyParams(p){
+  if (p.fontName)            setVal('fontName', p.fontName);
+  if (p.fontSize)            setSelectNumber('fontSize', p.fontSize);
+  if (p.alignment)           setSelectText('alignment', p.alignment);
+  if (p.lineSpacing)         setSelectNumber('lineSpacing', p.lineSpacing);
+  if (p.firstIndent != null) setVal('firstIndent', Math.max(1, p.firstIndent));
+  if (p.marginTop != null)   setSelectNumber('marginTop', p.marginTop);
+  if (p.marginBottom != null)setSelectNumber('marginBottom', p.marginBottom);
+  if (p.marginLeft != null)  setSelectNumber('marginLeft', p.marginLeft);
+  if (p.marginRight != null) setSelectNumber('marginRight', p.marginRight);
+  if (p.pageNumbers)         setSelectText('pageNumbers', p.pageNumbers);
+}
+
+function quickMsg(ok, text){
+  const s = document.getElementById('quickStatus');
+  if (s){ s.className = 'quick-status ' + (ok ? 'ok' : 'err'); s.textContent = text; }
+}
+
+/* ---- кнопка-пресет ---- */
+function applyPreset(name){
+  const p = PRESETS[name];
+  if (!p) return;
+  applyParams(p);
+  quickMsg(true, 'Подставлены параметры: ' + p.label + '. Проверьте вкладки и нажмите «Применить форматирование».');
+}
+
+/* ---- разбор форматирования из текста (правило-ориентированный, офлайн) ---- */
+function parseFormatting(raw){
+  const text = ' ' + String(raw).toLowerCase().replace(/ё/g, 'е') + ' ';
+  const params = {}; const rec = [];
+
+  // шрифт
+  const FONTS = [
+    ['Times New Roman', /times\s*new\s*roman|таймс|times/],
+    ['Arial', /arial|ариал/],
+    ['Calibri', /calibri|калибри/],
+    ['Georgia', /georgia|джорджия/],
+    ['Verdana', /verdana|вердана/],
+    ['Tahoma', /tahoma|тахома/],
+    ['Courier New', /courier\s*new|courier|курьер/],
+    ['Garamond', /garamond|гарамонд/],
+  ];
+  for (const [name, re] of FONTS){ if (re.test(text)){ params.fontName = name; rec.push('шрифт ' + name); break; } }
+
+  // размер шрифта
+  let m = text.match(/(?:кегл[а-яё]*|размер[а-яё]*)\s*[:=]?\s*(\d{1,2})/)
+       || text.match(/(\d{1,2})\s*(?:пт|pt)\b/)
+       || text.match(/(?:roman|arial|calibri|georgia|verdana|tahoma|courier|garamond|таймс|ариал|калибри|джорджия|вердана|тахома|курьер|гарамонд)\D{0,6}(\d{1,2})\b/);
+  if (m){ const v = parseInt(m[1], 10); if (v >= 8 && v <= 72){ params.fontSize = v; rec.push('размер ' + v); } }
+
+  // межстрочный интервал
+  if (/полуторн/.test(text)){ params.lineSpacing = 1.5; rec.push('интервал 1.5'); }
+  else if (/двойн/.test(text)){ params.lineSpacing = 2.0; rec.push('интервал 2.0'); }
+  else if (/одинарн|одинар/.test(text)){ params.lineSpacing = 1.0; rec.push('интервал 1.0'); }
+  else {
+    m = text.match(/(?:интервал[а-яё]*|межстрочн[а-яё]*)\s*[:=]?\s*(\d(?:[.,]\d)?)/) || text.match(/(\d[.,]\d)\s*(?:интервал|межстрочн)/);
+    if (m){ const v = parseFloat(m[1].replace(',', '.')); params.lineSpacing = v; rec.push('интервал ' + v); }
+  }
+
+  // нумерация — вырезаем её фразу, чтобы «по центру» из неё не сбило выравнивание
+  let work = text;
+  const numM = work.match(/(?:без\s+|не\s+)?(?:нумер[а-яё]*|номер[а-яё]*(?:\s*страниц[а-яё]*)?)[^,.;]*/);
+  if (numM){
+    const clause = numM[0];
+    work = work.replace(clause, ' ');
+    if (/(?:^|\s)(?:без|не)(?:\s|$)/.test(clause)){ params.pageNumbers = 'Не добавлять'; rec.push('без нумерации'); }
+    else {
+      const top = /(верх|вверх|сверху)/.test(clause);
+      const right = /(справ|право)/.test(clause);
+      params.pageNumbers = (top ? 'Вверху' : 'Внизу') + (right ? ' справа' : ' по центру');
+      rec.push('нумерация — ' + params.pageNumbers.toLowerCase());
+    }
+  }
+
+  // выравнивание (из остатка text без фразы нумерации)
+  if (/по\s*ширин|ширине|ширину/.test(work)){ params.alignment = 'По ширине'; rec.push('по ширине'); }
+  else if (/лев\w*\s*кра|по\s*лев|влево/.test(work)){ params.alignment = 'По левому краю'; rec.push('по левому краю'); }
+  else if (/прав\w*\s*кра|по\s*прав|вправо/.test(work)){ params.alignment = 'По правому краю'; rec.push('по правому краю'); }
+  else if (/по\s*центр|центрир/.test(work)){ params.alignment = 'По центру'; rec.push('по центру'); }
+
+  // красная строка / абзацный отступ
+  m = text.match(/(?:красн[а-яё]*\s*строк[а-яё]*|абзацн[а-яё]*\s*отступ[а-яё]*|отступ[а-яё]*\s*перв[а-яё]*\s*строк[а-яё]*)\D{0,8}(\d(?:[.,]\d+)?)/);
+  if (m){ const v = Math.max(1, parseFloat(m[1].replace(',', '.'))); params.firstIndent = v; rec.push('красная строка ' + v + ' см'); }
+
+  // поля
+  if (/пол[а-яё]*\s+по\s+гост/.test(text)){
+    params.marginTop = 2; params.marginBottom = 2; params.marginLeft = 3; params.marginRight = 1.5;
+    rec.push('поля по ГОСТ (2/2/3/1.5)');
+  }
+  const side = re => { const mm = text.match(re); return mm ? parseFloat(mm[1].replace(',', '.')) : undefined; };
+  const t = side(/верхн[а-яё]*\s*(?:поле[а-яё]*)?\s*[:=]?\s*(\d(?:[.,]\d)?)\s*см/);
+  const b = side(/нижн[а-яё]*\s*(?:поле[а-яё]*)?\s*[:=]?\s*(\d(?:[.,]\d)?)\s*см/);
+  const l = side(/лев[а-яё]*\s*(?:поле[а-яё]*)?\s*[:=]?\s*(\d(?:[.,]\d)?)\s*см/);
+  const r = side(/прав[а-яё]*\s*(?:поле[а-яё]*)?\s*[:=]?\s*(\d(?:[.,]\d)?)\s*см/);
+  const sidesGiven = [t, b, l, r].some(x => x != null);
+  const mAll = text.match(/пол[а-яё]*\s*(?:со\s+всех\s+сторон\s*)?[:=]?\s*(\d(?:[.,]\d)?)\s*см\s*(?:со\s+всех\s+сторон)?/);
+  if (!sidesGiven && !/пол[а-яё]*\s+по\s+гост/.test(text) && mAll){
+    const v = parseFloat(mAll[1].replace(',', '.'));
+    params.marginTop = v; params.marginBottom = v; params.marginLeft = v; params.marginRight = v;
+    rec.push('поля ' + v + ' см со всех сторон');
+  }
+  if (t != null) params.marginTop = t;
+  if (b != null) params.marginBottom = b;
+  if (l != null) params.marginLeft = l;
+  if (r != null) params.marginRight = r;
+  if (sidesGiven){
+    rec.push('поля: ' + ['верх ' + (params.marginTop ?? '—'), 'низ ' + (params.marginBottom ?? '—'),
+                         'лево ' + (params.marginLeft ?? '—'), 'право ' + (params.marginRight ?? '—')].join(', '));
+  }
+
+  return { params, recognized: rec };
+}
+
+/* ---- кнопка «Применить описание» ---- */
+function applyFromText(){
+  const el = document.getElementById('nlInput');
+  const text = el ? el.value : '';
+  if (!text.trim()){ quickMsg(false, 'Введите описание форматирования словами.'); return; }
+  const { params, recognized } = parseFormatting(text);
+  applyParams(params);
+  if (recognized.length){
+    quickMsg(true, 'Распознано: ' + recognized.join(', ') + '. Проверьте и нажмите «Применить форматирование».');
+  } else {
+    quickMsg(false, 'Не удалось распознать параметры. Укажите шрифт, размер, интервал, выравнивание, поля или нумерацию.');
   }
 }
