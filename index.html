@@ -119,31 +119,19 @@
             <div class="form-grid">
                 <div class="form-group">
                     <label>Верхнее (см):</label>
-                    <select id="marginTop">
-                        <option>1</option>
-                        <option selected>2</option>
-                    </select>
+                    <input type="number" id="marginTop" value="2" step="0.25" min="0.75" max="5">
                 </div>
                 <div class="form-group">
                     <label>Нижнее (см):</label>
-                    <select id="marginBottom">
-                        <option>1</option>
-                        <option selected>2</option>
-                    </select>
+                    <input type="number" id="marginBottom" value="2" step="0.25" min="0.75" max="5">
                 </div>
                 <div class="form-group">
                     <label>Левое (см):</label>
-                    <select id="marginLeft">
-                        <option>2.5</option>
-                        <option selected>3</option>
-                    </select>
+                    <input type="number" id="marginLeft" value="3" step="0.25" min="0.75" max="5">
                 </div>
                 <div class="form-group">
                     <label>Правое (см):</label>
-                    <select id="marginRight">
-                        <option selected>1.5</option>
-                        <option>2.5</option>
-                    </select>
+                    <input type="number" id="marginRight" value="1.5" step="0.25" min="0.75" max="5">
                 </div>
             </div>
         </div>
@@ -173,8 +161,10 @@
                         <option selected>Не добавлять</option>
                         <option>Внизу по центру</option>
                         <option>Внизу справа</option>
+                        <option>Внизу слева</option>
                         <option>Вверху по центру</option>
                         <option>Вверху справа</option>
+                        <option>Вверху слева</option>
                     </select>
                 </div>
             </div>
@@ -189,12 +179,32 @@
     <aside class="container side-card">
         <label class="section-title">Стандарты ГОСТ</label>
         <div class="preset-col">
-            <button type="button" class="preset-btn" onclick="applyPreset('gost7_32')">ГОСТ 7.32-2017</button>
-            <button type="button" class="preset-btn" onclick="applyPreset('gost_r_7011')">ГОСТ Р 7.0.11</button>
-            <button type="button" class="preset-btn" onclick="applyPreset('coursework')">Курсовая / реферат</button>
-            <button type="button" class="preset-btn" onclick="applyPreset('plain')">Без нумерации (доклад)</button>
+            <button type="button" class="preset-btn" onclick="applyPreset('gost7_32')">
+                <span class="preset-title">ГОСТ 7.32-2017</span>
+                <span class="preset-sub">Отчёт о НИР, реферат</span>
+            </button>
+            <button type="button" class="preset-btn" onclick="applyPreset('gost_r_7011')">
+                <span class="preset-title">ГОСТ Р 7.0.11</span>
+                <span class="preset-sub">Диссертация, автореферат</span>
+            </button>
+            <button type="button" class="preset-btn" onclick="applyPreset('coursework')">
+                <span class="preset-title">Курсовая / диплом</span>
+                <span class="preset-sub">Типовые требования вуза</span>
+            </button>
+            <button type="button" class="preset-btn" onclick="applyPreset('plain')">
+                <span class="preset-title">Доклад / эссе</span>
+                <span class="preset-sub">Без нумерации, поля 2 см</span>
+            </button>
         </div>
-        <div class="preset-note">Типовые значения — сверяйтесь с методичкой, требования могут отличаться.</div>
+        <div class="gost-upload">
+            <input type="file" id="gostInput" accept=".docx">
+            <label for="gostInput" class="preset-btn gost-btn">
+                <span class="preset-title">Выбрать свой ГОСТ</span>
+                <span class="preset-sub">Считать оформление из .docx-образца</span>
+            </label>
+            <span id="gostFileName" class="gost-filename"></span>
+        </div>
+
     </aside>
 
     <!-- Скачать шаблон с макросом — отдельная карточка -->

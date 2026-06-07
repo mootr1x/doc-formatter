@@ -450,6 +450,21 @@ h1 {
 .preset-col .preset-btn {
     width: 100%;
     text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    line-height: 1.25;
+    padding: 9px 12px;
+}
+
+.preset-title {
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.preset-sub {
+    font-size: 11px;
+    opacity: 0.78;
 }
 
 /* узкие экраны: одна колонка, карточка ГОСТ уходит вниз под основную */
@@ -499,4 +514,24 @@ h1 {
 .template-section {
     margin-top: 20px;
     padding-top: 20px;
+}
+/* ---- кнопка «Выбрать свой ГОСТ» в боковой карточке ---- */
+.gost-upload {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 4px 0 12px;
+}
+.gost-upload input[type="file"] {
+    display: none;
+}
+.gost-btn {
+    cursor: pointer;
+}
+.gost-filename {
+    font-size: 11px;
+    color: var(--filename);
+    text-align: center;
+    min-height: 14px;
+    word-break: break-all;
 }
