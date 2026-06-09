@@ -35,8 +35,8 @@
         <div class="section">
             <label class="section-title">Выберите файл</label>
             <div class="file-upload">
-                <input type="file" id="fileInput" accept=".docx">
-                <label for="fileInput" class="file-btn">📁 Выбрать файл .docx</label>
+                <input type="file" id="fileInput" accept=".docx,.pdf">
+                <label for="fileInput" class="file-btn">📁 Выбрать файл .docx или .pdf</label>
                 <span id="fileName">Файл не выбран</span>
             </div>
         </div>
@@ -170,8 +170,12 @@
             </div>
         </div>
 
-        <!-- Кнопка применить -->
-        <button class="apply-btn" onclick="applyFormatting()">Применить форматирование</button>
+        <!-- Кнопки сохранения -->
+        <div class="button-row">
+            <button class="apply-btn btn-word" onclick="saveAsWord()">Сохранить в Word</button>
+            <button class="apply-btn btn-pdf" onclick="saveAsPdf()">Сохранить в PDF</button>
+        </div>
+        <p class="pdf-note">PDF собирается прямо в браузере: шрифт, поля, интервал и выравнивание — точно. Оглавление и номера страниц — это поля Word, в PDF они не подставляются: для них сохраните в Word и нажмите F9.</p>
         <div id="status" class="status"></div>
     </div>
 
@@ -211,7 +215,7 @@
     <div class="container template-section">
         <label class="section-title">Офлайн-версия</label>
         <div class="template-block">
-            <p class="template-desc">Word-документ со встроенным макросом — прототип этого сайта для работы без интернета.</p>
+            <p class="template-desc">Word-документ со встроенным макросом — прототип этого сайта для работы без интернета. Не поддерживает работу PDF.</p>
             <a href="AutoFormatter.docm" download class="apply-btn template-btn">
                 Скачать шаблон с макросом
             </a>
@@ -219,8 +223,22 @@
     </div>
     </div>
 
+    <!-- скрытый контейнер: сюда docx-preview рисует документ, затем печать → PDF -->
+    <div id="pdfRenderArea" aria-hidden="true"></div>
+
     <script src="https://unpkg.com/pizzip@3.1.3/dist/pizzip.js"></script>
     <script src="https://unpkg.com/docxtemplater@3.44.0/build/docxtemplater.js"></script>
+    <!-- pdf.js — извлечение текста из PDF на входе -->
+    <script src="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+    <!-- docx-preview — рендер .docx для «Сохранить в PDF» (через печать браузера) -->
+    <script src="https://unpkg.com/docx-preview@0.3.3/dist/docx-preview.min.js"></script>
+    <script>
+        // worker для pdf.js обязателен и должен совпадать по версии с библиотекой
+        if (window.pdfjsLib) {
+            window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+                'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+        }
+    </script>
     <script src="app.js"></script>
 </body>
 </html>

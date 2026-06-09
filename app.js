@@ -1,4 +1,4 @@
-/* ---- переключение тем ---- */
+/* переключение тем */
 function setTheme(theme) {
   if (!theme || theme === 'light') document.documentElement.removeAttribute('data-theme');
   else document.documentElement.setAttribute('data-theme', theme);
@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 });
 
-/* ---- вкладки ---- */
+/* вкладки */
 function showTab(tabName) {
   document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -48,15 +48,44 @@ function showTab(tabName) {
   if (typeof event !== 'undefined' && event.target) event.target.classList.add('active');
 }
 
-/* ---- имя выбранного файла ---- */
+/* Текущий документ для форматирования.
+   .docx — читаем как есть; .pdf — конвертируем в .docx (pdf.js) и дальше
+   работаем тем же конвейером. Буфер кэшируем, чтобы не конвертировать
+   повторно на каждое нажатие «Сохранить…».*/
+let currentDocxBuffer = null;   // ArrayBuffer готового к обработке .docx
+let currentBaseName   = '';     // имя без расширения — для имени результата
+let docReady          = false;  // готов ли currentDocxBuffer
+let docPreparing      = null;   // Promise, пока идёт чтение/конвертация
+
+/* выбор файла (.docx или .pdf) */
 document.getElementById('fileInput').addEventListener('change', function () {
-  const fileName = this.files[0] ? this.files[0].name : 'Файл не выбран';
-  document.getElementById('fileName').textContent = fileName;
+  const file = this.files[0];
+  const nameEl = document.getElementById('fileName');
+  const status = document.getElementById('status');
+  currentDocxBuffer = null; docReady = false; docPreparing = null;
+
+  if (!file) { nameEl.textContent = 'Файл не выбран'; return; }
+  nameEl.textContent = file.name;
+  currentBaseName = file.name.replace(/\.(docx|pdf)$/i, '');
+
+  const isPdf = /\.pdf$/i.test(file.name) || file.type === 'application/pdf';
+  if (isPdf) {
+    if (status) { status.className = 'status loading'; status.textContent = 'Конвертирую PDF → Word…'; }
+    docPreparing = (async () => {
+      currentDocxBuffer = await convertPdfToDocxBuffer(file);   // бросит ошибку, если текст не извлёкся
+      docReady = true;
+      if (status) { status.className = 'status success'; status.textContent = '✔ PDF сконвертирован в Word. Можно форматировать и сохранять.'; }
+    })().catch(err => {
+      docReady = false; currentDocxBuffer = null;
+      if (status) { status.className = 'status error'; status.textContent = 'Не удалось прочитать PDF: ' + (err && err.message ? err.message : err); }
+      console.error(err);
+    });
+  } else {
+    docPreparing = file.arrayBuffer().then(buf => { currentDocxBuffer = buf; docReady = true; });
+  }
 });
 
-/* =========================================================================
-   Namespaces и канонический порядок дочерних элементов (по схеме OOXML).
-   ========================================================================= */
+/* Namespaces и канонический порядок дочерних элементов (по схеме OOXML). */
 const NS = {
   w:   'http://schemas.openxmlformats.org/wordprocessingml/2006/main',
   r:   'http://schemas.openxmlformats.org/officeDocument/2006/relationships',
@@ -68,7 +97,7 @@ const RPR_ORDER = ['rStyle','rFonts','b','bCs','i','iCs','caps','smallCaps','str
 const SECT_ORDER = ['headerReference','footerReference','footnotePr','endnotePr','type','pgSz','pgMar','paperSrc','pgBorders','lnNumType','pgNumType','cols','formProt','vAlign','noEndnote','titlePg','textDirection','bidi','rtlGutter','docGrid','printerSettings','sectPrChange'];
 const LVL_ORDER = ['start','numFmt','lvlRestart','pStyle','isLgl','suff','lvlText','lvlPicBulletId','legacy','lvlJc','pPr','rPr'];
 
-/* ---- DOM-хелперы ---- */
+/* DOM-хелперы */
 function parseXml(s){ return new DOMParser().parseFromString(s, 'application/xml'); }
 function serializeXml(doc){ return new XMLSerializer().serializeToString(doc); }
 function mk(doc, qname, attrs){
@@ -104,7 +133,7 @@ function ensureRootNs(xml){
   return xml.replace(m[0], tag);
 }
 
-/* ---- содержимое колонтитулов ---- */
+/* содержимое колонтитулов */
 function rPrStr(font, sz){
   return `<w:rPr><w:rFonts w:ascii="${xmlEscape(font)}" w:hAnsi="${xmlEscape(font)}" w:cs="${xmlEscape(font)}"/>` +
     `<w:b w:val="0"/><w:i w:val="0"/><w:color w:val="000000"/>` +
@@ -143,9 +172,6 @@ function readRelMap(relsXml){
 function nextRid(relsXml){ let max = 0, m, re = /Id="rId(\d+)"/g; while ((m = re.exec(relsXml))) max = Math.max(max, parseInt(m[1], 10)); return 'rId' + (max + 1); }
 function freeName(existing, base, ext){ let n = base + ext, i = 1; while (existing.has(n)){ n = base + (++i) + ext; } existing.add(n); return n; }
 
-/* =========================================================================
-   processDocx — применяет форматирование к PizZip-архиву (синхронно)
-   ========================================================================= */
 function processDocx(zip, params){
   const ALIGN = { 'По левому краю':'left', 'По центру':'center', 'По правому краю':'right', 'По ширине':'both' };
   const align = ALIGN[params.alignment] || params.alignment || 'both';
@@ -166,7 +192,7 @@ function processDocx(zip, params){
   // заголовки по умолчанию тоже без жирного (правило «жирный отключать»); можно вернуть флагом.
   const boldHeadings = params.boldHeadings === true;
 
-  // --- document.xml ---
+  // document.xml
   const doc = parseXml(ensureRootNs(zip.file('word/document.xml').asText()));
   const body = doc.getElementsByTagNameNS(NS.w, 'body')[0];
 
@@ -394,7 +420,7 @@ function processDocx(zip, params){
     for (const node of [tocTitle, fld, pb]) body.insertBefore(node, anchor);
   }
 
-  // --- сохраняем document.xml ---
+  // сохраняем document.xml 
   zip.file('word/document.xml', serializeXml(doc));
 
   
@@ -409,10 +435,10 @@ function processDocx(zip, params){
       .map(o => `<Override PartName="${o.part}" ContentType="${o.ct}"/>`).join('');
     if (ovs){ ctXml = ctXml.replace('</Types>', ovs + '</Types>'); zip.file('[Content_Types].xml', ctXml); }
   }
-  // --- части колонтитулов ---
+  // части колонтитулов
   for (const path of Object.keys(filesToWrite)) zip.file(path, filesToWrite[path]);
 
-  // --- settings.xml: обновлять поля при открытии ---
+  // settings.xml: обновлять поля при открытии
   const setFile = zip.file('word/settings.xml');
   if (setFile && wantToc){
     let s = setFile.asText();
@@ -481,70 +507,77 @@ function parseNumbering(){
 }
 
 
-async function applyFormatting(){
-  const fileInput = document.getElementById('fileInput');
-  const status = document.getElementById('status');
+/* собираем параметры форматирования из формы — единый источник для Word и PDF */
+function collectParams(){
+  const num = parseNumbering();
+  return {
+    fontName:    document.getElementById('fontName').value,
+    fontSize:    parseInt(document.getElementById('fontSize').value) || 14,
+    alignment:   document.getElementById('alignment').value,
+    lineSpacing: parseFloat(document.getElementById('lineSpacing').value) || 1.5,
+    firstIndent: Math.max(1, parseFloat(document.getElementById('firstIndent').value) || 1),
+    marginTop:    clampMargin(document.getElementById('marginTop').value,    2),
+    marginBottom: clampMargin(document.getElementById('marginBottom').value, 2),
+    marginLeft:   clampMargin(document.getElementById('marginLeft').value,   3),
+    marginRight:  clampMargin(document.getElementById('marginRight').value,  1.5),
+    headerFirst: fieldValue(['headerFirst', 'headerFirstPage'], /верхн.*(1|перв).*страниц/i),
+    footerFirst: fieldValue(['footerFirst', 'footerFirstPage'], /нижн.*(1|перв).*страниц/i),
+    headerOther: fieldValue(['headerOther', 'headerRest'],      /верхн.*(остальн|друг).*страниц/i),
+    footerOther: fieldValue(['footerOther', 'footerRest'],      /нижн.*(остальн|друг).*страниц/i),
+    numberingPos:   num.numberingPos,
+    numberingAlign: num.numberingAlign,
+    toc: checkValue(['toc', 'optToc', 'tocEnabled', 'addToc'], /оглавл|содержан/i, true),
+  };
+}
 
-  if (!fileInput.files[0]){
-    status.className = 'status error';
-    status.textContent = 'Пожалуйста, выберите файл!';
-    return;
+/* документ выбран и готов? для PDF — дождаться конвертации */
+async function ensureDocReady(status){
+  if (!currentDocxBuffer && !docPreparing){
+    if (status){ status.className = 'status error'; status.textContent = 'Пожалуйста, выберите файл (.docx или .pdf)!'; }
+    return false;
+  }
+  if (docPreparing) await docPreparing;            // ждём чтение/конвертацию, если идёт
+  if (!docReady || !currentDocxBuffer){
+    if (status){ status.className = 'status error'; status.textContent = 'Документ не готов — проверьте выбранный файл.'; }
+    return false;
   }
   if (typeof PizZip === 'undefined'){
-    status.className = 'status error';
-    status.textContent = 'Не подключена библиотека PizZip (проверь <script> в index.html).';
-    return;
+    if (status){ status.className = 'status error'; status.textContent = 'Не подключена библиотека PizZip (проверь <script> в index.html).'; }
+    return false;
   }
+  return true;
+}
+
+/* строим отформатированный архив .docx (PizZip) из текущего документа */
+function buildFormattedZip(){
+  const zip = new PizZip(currentDocxBuffer);
+  if (!zip.file('word/document.xml')) throw new Error('Это не похоже на документ Word (.docx).');
+  processDocx(zip, collectParams());
+  return zip;
+}
+
+/* «Сохранить в Word» (бывшая «Применить форматирование») */
+async function saveAsWord(){
+  const status = document.getElementById('status');
+  if (!(await ensureDocReady(status))) return;
 
   status.className = 'status loading';
-  status.textContent = 'Обрабатываем документ...';
-
+  status.textContent = 'Обрабатываем документ…';
   try {
-    const file = fileInput.files[0];
-    const arrayBuffer = await file.arrayBuffer();
-
-    const num = parseNumbering();
-    const params = {
-      fontName:    document.getElementById('fontName').value,
-      fontSize:    parseInt(document.getElementById('fontSize').value) || 14,
-      alignment:   document.getElementById('alignment').value,
-      lineSpacing: parseFloat(document.getElementById('lineSpacing').value) || 1.5,
-      firstIndent: Math.max(1, parseFloat(document.getElementById('firstIndent').value) || 1),
-      marginTop:    clampMargin(document.getElementById('marginTop').value,    2),
-      marginBottom: clampMargin(document.getElementById('marginBottom').value, 2),
-      marginLeft:   clampMargin(document.getElementById('marginLeft').value,   3),
-      marginRight:  clampMargin(document.getElementById('marginRight').value,  1.5),
-      // колонтитулы — берутся из вкладки «Колонтитулы» (по id или по подписям полей)
-      headerFirst: fieldValue(['headerFirst', 'headerFirstPage'], /верхн.*(1|перв).*страниц/i),
-      footerFirst: fieldValue(['footerFirst', 'footerFirstPage'], /нижн.*(1|перв).*страниц/i),
-      headerOther: fieldValue(['headerOther', 'headerRest'],      /верхн.*(остальн|друг).*страниц/i),
-      footerOther: fieldValue(['footerOther', 'footerRest'],      /нижн.*(остальн|друг).*страниц/i),
-      numberingPos:   num.numberingPos,
-      numberingAlign: num.numberingAlign,
-      // оглавление: подхватится, если есть переключатель; иначе по умолчанию включено
-      toc: checkValue(['toc', 'optToc', 'tocEnabled', 'addToc'], /оглавл|содержан/i, true),
-    };
-
-    const zip = new PizZip(arrayBuffer);
-    if (!zip.file('word/document.xml')) throw new Error('Это не похоже на документ Word (.docx).');
-
-    processDocx(zip, params);
-
+    const zip = buildFormattedZip();
     const output = zip.generate({
       type: 'blob',
       mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     });
-
     const url = URL.createObjectURL(output);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'formatted_' + file.name;
+    a.download = 'formatted_' + (currentBaseName || 'document') + '.docx';
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 4000);
 
     status.className = 'status success';
-    status.textContent = '✔ Готово! Файл скачан. В Word согласись обновить поля (или Ctrl+A → F9) для оглавления и номеров.';
-
+    status.textContent = '✔ Готово! Файл .docx скачан. В Word согласись обновить поля (или Ctrl+A → F9) для оглавления и номеров.';
   } catch (err) {
     status.className = 'status error';
     status.textContent = 'Ошибка: ' + (err && err.message ? err.message : err);
@@ -552,11 +585,151 @@ async function applyFormatting(){
   }
 }
 
-/* =========================================================================
-   Быстрая настройка: пресеты ГОСТ + разбор форматирования из текста.
-   Оба механизма только ЗАПОЛНЯЮТ форму — применяет всё кнопка
-   «Применить форматирование» (как обычно).
-   ========================================================================= */
+/* «Сохранить в PDF»: docx-preview рендерит документ → печать браузера
+   Браузер сам разбивает на страницы и формирует PDF («Сохранить как PDF»).
+   Поля Word (оглавление TOC, номера страниц PAGE) тут НЕ вычисляются —
+   честно сказано в подписи под кнопкой; для них — «Сохранить в Word» + F9. */
+async function saveAsPdf(){
+  const status = document.getElementById('status');
+  if (!(await ensureDocReady(status))) return;
+  if (!window.docx || typeof window.docx.renderAsync !== 'function'){
+    status.className = 'status error';
+    status.textContent = 'Не подключена библиотека docx-preview (проверь <script> в index.html).';
+    return;
+  }
+
+  status.className = 'status loading';
+  status.textContent = 'Готовлю PDF (откроется окно печати → «Сохранить как PDF»)…';
+  try {
+    const zip = buildFormattedZip();
+    const blob = zip.generate({
+      type: 'blob',
+      mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    });
+    const area = document.getElementById('pdfRenderArea');
+    area.innerHTML = '';
+    await window.docx.renderAsync(blob, area, null, {
+      className: 'docx', inWrapper: false,
+      renderHeaders: true, renderFooters: true, ignoreLastRenderedPageBreak: true
+    });
+    // даём верстке примениться, затем печать
+    setTimeout(() => window.print(), 250);
+
+    status.className = 'status success';
+    status.textContent = '✔ Открыто окно печати — выберите «Сохранить как PDF». (Оглавление и номера страниц в этом режиме не подставляются — см. подпись под кнопкой.)';
+  } catch (err) {
+    status.className = 'status error';
+    status.textContent = 'Ошибка при формировании PDF: ' + (err && err.message ? err.message : err);
+    console.error(err);
+  }
+}
+function median(nums){
+  if (!nums.length) return 0;
+  const a = nums.slice().sort((x, y) => x - y);
+  const m = a.length >> 1;
+  return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2;
+}
+function estimateWidth(str, h){ return (str ? str.length : 0) * h * 0.5; }
+
+async function extractPdfParagraphs(arrayBuffer){
+  const pdfjsLib = window.pdfjsLib;
+  if (!pdfjsLib) throw new Error('не подключена библиотека pdf.js.');
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  const paragraphs = [];
+
+  for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++){
+    const page = await pdf.getPage(pageNum);
+    const content = await page.getTextContent();
+
+    // текстовые элементы с координатами (transform[4]=x, transform[5]=y; y растёт вверх)
+    const items = content.items
+      .filter(it => it && typeof it.str === 'string')
+      .map(it => ({
+        str: it.str,
+        x: it.transform[4],
+        y: it.transform[5],
+        w: it.width || 0,
+        h: it.height || Math.abs(it.transform[3]) || 12
+      }));
+    if (!items.length) continue;
+
+    // группируем элементы в строки по близкому Y
+    items.sort((a, b) => (b.y - a.y) || (a.x - b.x));
+    const yTol = Math.max(2, (median(items.map(i => i.h)) || 12) * 0.5);
+    const lines = [];
+    let cur = null;
+    for (const it of items){
+      if (cur && Math.abs(it.y - cur.y) <= yTol) cur.parts.push(it);
+      else { cur = { y: it.y, parts: [it] }; lines.push(cur); }
+    }
+
+    // собираем текст строки (восстанавливаем пробелы по горизонтальным разрывам)
+    const lineObjs = lines.map(ln => {
+      ln.parts.sort((a, b) => a.x - b.x);
+      let text = '', prevEnd = null, maxH = 0;
+      for (const p of ln.parts){
+        if (p.h > maxH) maxH = p.h;
+        if (prevEnd != null){
+          const gap = p.x - prevEnd;
+          if (gap > p.h * 0.25 && !/\s$/.test(text) && !/^\s/.test(p.str)) text += ' ';
+        }
+        text += p.str;
+        prevEnd = p.x + (p.w || estimateWidth(p.str, p.h));
+      }
+      return { y: ln.y, h: maxH || 12, text: text.replace(/\s+/g, ' ').trim() };
+    }).filter(l => l.text.length);
+    if (!lineObjs.length) continue;
+
+    // абзацы: разрыв заметно больше обычного межстрочного → новый абзац
+    const gaps = [];
+    for (let i = 1; i < lineObjs.length; i++) gaps.push(lineObjs[i - 1].y - lineObjs[i].y);
+    const baseGap = median(gaps) || lineObjs[0].h * 1.2;
+    let buf = [];
+    const flush = () => { if (buf.length){ paragraphs.push(buf.join(' ').replace(/\s+/g, ' ').trim()); buf = []; } };
+    for (let i = 0; i < lineObjs.length; i++){
+      buf.push(lineObjs[i].text);
+      const next = lineObjs[i + 1];
+      if (next && (lineObjs[i].y - next.y) > baseGap * 1.6) flush();
+    }
+    flush();                       // конец страницы — закрываем абзац
+  }
+  return paragraphs.filter(p => p.length);
+}
+
+// собираем минимальный валидный .docx из массива абзацев
+function buildMinimalDocx(paragraphs){
+  const bodyParas = paragraphs
+    .map(t => `<w:p><w:r><w:t xml:space="preserve">${xmlEscape(t)}</w:t></w:r></w:p>`)
+    .join('');
+  const sectPr = `<w:sectPr><w:pgSz w:w="11906" w:h="16838"/>` +
+    `<w:pgMar w:top="1134" w:right="850" w:bottom="1134" w:left="1701" w:header="720" w:footer="720" w:gutter="0"/></w:sectPr>`;
+  const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="${NS.w}" xmlns:r="${NS.r}"><w:body>${bodyParas}${sectPr}</w:body></w:document>`;
+
+  const zip = new PizZip();
+  zip.file('[Content_Types].xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/><Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/></Types>`);
+  zip.file('_rels/.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`);
+  zip.file('word/_rels/document.xml.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/></Relationships>`);
+  zip.file('word/styles.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:styles xmlns:w="${NS.w}"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:cs="Times New Roman"/><w:sz w:val="28"/><w:szCs w:val="28"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:line="360" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>` +
+    `<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style></w:styles>`);
+  zip.file('word/settings.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:settings xmlns:w="${NS.w}"/>`);
+  zip.file('word/document.xml', documentXml);
+  return zip;
+}
+
+// PDF-файл → ArrayBuffer готового .docx
+async function convertPdfToDocxBuffer(file){
+  const paragraphs = await extractPdfParagraphs(await file.arrayBuffer());
+  if (!paragraphs.length){
+    throw new Error('текст не найден. Похоже на скан (картинки страниц) — для него нужен OCR, а не извлечение текста.');
+  }
+  return buildMinimalDocx(paragraphs).generate({ type: 'arraybuffer' });
+}
 
 /* Пресеты. Значения подставляются в поля формы.
    pageNumbers — это видимый текст пункта в списке «Нумерация страниц». */
@@ -579,7 +752,7 @@ const PRESETS = {
                  pageNumbers: 'Не добавлять' },
 };
 
-/* ---- установка значений в поля (поддержка input и select) ---- */
+/* установка значений в поля (поддержка input и select) */
 function setVal(id, v){ const el = document.getElementById(id); if (el) el.value = v; }
 
 // поля страницы: допустимый диапазон в сантиметрах
@@ -623,7 +796,7 @@ function quickMsg(ok, text){
   if (s){ s.className = 'quick-status ' + (ok ? 'ok' : 'err'); s.textContent = text; }
 }
 
-/* ---- кнопка-пресет ---- */
+/* кнопка-пресет*/
 function applyPreset(name){
   const p = PRESETS[name];
   if (!p) return;
@@ -631,7 +804,7 @@ function applyPreset(name){
   quickMsg(true, 'Подставлены параметры: ' + p.label + '. Проверьте вкладки и нажмите «Применить форматирование».');
 }
 
-/* ---- разбор форматирования из текста (правило-ориентированный, офлайн) ----
+/*  разбор форматирования из текста (правило-ориентированный, офлайн)
    Понимает и «шаблонные», и «разговорные» формулировки, например:
      «Times New Roman 14, полуторный интервал, по ширине»
      «сделай шрифт таймс нью роман 14 размера, выравнивание по ширине, интервал полтора»
@@ -641,7 +814,7 @@ function parseFormatting(raw){
   const text = ' ' + String(raw).toLowerCase().replace(/ё/g, 'е').replace(/\s+/g, ' ') + ' ';
   const params = {}; const rec = [];
 
-  /* ---------- шрифт ---------- */
+  /* шрифт */
   const FONTS = [
     ['Times New Roman', /times\s*new\s*roman|таймс[\s-]*нью[\s-]*роман|таймс|times/],
     ['Arial',           /\barial\b|ариал/],
@@ -654,7 +827,7 @@ function parseFormatting(raw){
   ];
   for (const [name, re] of FONTS){ if (re.test(text)){ params.fontName = name; rec.push('шрифт ' + name); break; } }
 
-  /* ---------- размер шрифта (целое 8..72) ----------
+  /* размер шрифта (целое 8..72)
      ловим оба порядка слов:
        «размер 14», «кегль 14», «шрифт 14», «величиной 14»  (слово → число)
        «14 размера», «14-го кегля», «14 пт», «14 пунктов»    (число → слово)
@@ -667,7 +840,7 @@ function parseFormatting(raw){
     || text.match(new RegExp('(?:' + FONT_WORDS + ')\\D{0,8}(\\d{1,2})(?![.,]?\\d)'));
   if (m){ const v = parseInt(m[1], 10); if (v >= 8 && v <= 72){ params.fontSize = v; rec.push('размер ' + v); } }
 
-  /* ---------- межстрочный интервал ---------- */
+  /* межстрочный интервал */
   if (/полтора|полуторн|полутор|через\s*полтора/.test(text)){ params.lineSpacing = 1.5; rec.push('интервал 1.5'); }
   else if (/двойн|через\s*два|два\s*интервал/.test(text)){ params.lineSpacing = 2.0; rec.push('интервал 2.0'); }
   else if (/одинарн|одинар|через\s*один|один\s*интервал/.test(text)){ params.lineSpacing = 1.0; rec.push('интервал 1.0'); }
@@ -677,7 +850,7 @@ function parseFormatting(raw){
     if (m){ const v = parseFloat(m[1].replace(',', '.')); if (v >= 0.5 && v <= 3){ params.lineSpacing = v; rec.push('интервал ' + v); } }
   }
 
-  /* ---------- нумерация страниц ----------
+  /* нумерация страниц
      сначала вырезаем «нумерационную» фразу, чтобы «по центру»/«справа» из неё
      не сбили выравнивание абзацев. */
   let work = text;
@@ -696,17 +869,17 @@ function parseFormatting(raw){
     }
   }
 
-  /* ---------- выравнивание (из остатка work, без фразы нумерации) ---------- */
+  /* выравнивание (из остатка work, без фразы нумерации) */
   if (/по\s*ширин|ширине|ширину|по\s*обоим|растян/.test(work)){ params.alignment = 'По ширине'; rec.push('по ширине'); }
   else if (/лев\w*\s*кра|по\s*лев|влево|выровн\w*\s*влев|выровн\w*\s*слев/.test(work)){ params.alignment = 'По левому краю'; rec.push('по левому краю'); }
   else if (/прав\w*\s*кра|по\s*прав|вправо|выровн\w*\s*вправ|выровн\w*\s*справ/.test(work)){ params.alignment = 'По правому краю'; rec.push('по правому краю'); }
   else if (/по\s*центр|центрир|посредине|посередине/.test(work)){ params.alignment = 'По центру'; rec.push('по центру'); }
 
-  /* ---------- красная строка / абзацный отступ ---------- */
+  /* красная строка / абзацный отступ */
   m = text.match(/(?:красн[а-яё]*\s*строк[а-яё]*|абзацн[а-яё]*\s*отступ[а-яё]*|отступ[а-яё]*\s*перв[а-яё]*\s*строк[а-яё]*|абзац[а-яё]*\s*отступ[а-яё]*)\D{0,8}(\d(?:[.,]\d+)?)/);
   if (m){ const v = Math.max(1, parseFloat(m[1].replace(',', '.'))); params.firstIndent = v; rec.push('красная строка ' + v + ' см'); }
 
-  /* ---------- поля страницы ---------- */
+  /* поля страницы */
   if (/пол[а-яё]*\s+(?:как\s+)?по\s+госту?|стандартн[а-яё]*\s+пол[а-яё]*|пол[а-яё]*\s+гост/.test(text)){
     params.marginTop = 2; params.marginBottom = 2; params.marginLeft = 3; params.marginRight = 1.5;
     rec.push('поля по ГОСТ (2/2/3/1.5)');
@@ -735,7 +908,7 @@ function parseFormatting(raw){
   return { params, recognized: rec };
 }
 
-/* ---- кнопка «Применить описание» ---- */
+/* кнопка «Применить описание» */
 function applyFromText(){
   const el = document.getElementById('nlInput');
   const text = el ? el.value : '';
@@ -748,18 +921,6 @@ function applyFromText(){
     quickMsg(false, 'Не удалось распознать параметры. Укажите шрифт, размер, интервал, выравнивание, поля или нумерацию.');
   }
 }
-
-/* =========================================================================
-   «Выбрать свой ГОСТ»: считываем РЕАЛЬНОЕ оформление из эталонного .docx
-   (методичка/образец, уже оформленный по нужному ГОСТу) и заполняем форму.
-   Это операция, ОБРАТНАЯ к processDocx: документ не меняется — мы читаем его
-   свойства из XML (styles.xml, document.xml, колонтитулы) и подставляем в поля.
-   Применяет всё, как обычно, кнопка «Применить форматирование».
-
-   ВАЖНО: считывается то, КАК документ оформлен (шрифт/кегль/поля/интервал/
-   нумерация), а НЕ текст требований стандарта. Поэтому загружать нужно
-   правильно оформленный образец .docx, а не PDF или прозу самого ГОСТа.
-   ========================================================================= */
 
 // твипы → сантиметры (1 см = 567 твипов), округление до 2 знаков
 const twipsToCm = tw => Math.round((parseFloat(tw) / 567) * 100) / 100;
@@ -786,7 +947,7 @@ async function readGostDocx(file){
   const doc = parseXml(ensureRootNs(docFile.asText()));
   const p = {}; const rec = [];
 
-  /* ---- styles.xml: значения «по умолчанию» и стиль Normal ---- */
+  /*  styles.xml: значения «по умолчанию» и стиль Normal  */
   let defFont, defSz, defLine, defLineRule, defJc, defFirst;
   const stylesFile = zip.file('word/styles.xml');
   if (stylesFile){
@@ -830,7 +991,7 @@ async function readGostDocx(file){
     }
   }
 
-  /* ---- document.xml: статистика по реальным абзацам/ранам тела (берём моду) ---- */
+  /*  document.xml: статистика по реальным абзацам/ранам тела (берём моду)  */
   const fonts = [], sizes = [], lines = [], jcs = [], firsts = [];
   for (const para of Array.from(doc.getElementsByTagNameNS(NS.w, 'p'))){
     const txt = Array.from(para.getElementsByTagNameNS(NS.w, 't')).map(t => t.textContent).join('').trim();
@@ -855,7 +1016,7 @@ async function readGostDocx(file){
     }
   }
 
-  /* ---- сводим: приоритет у «частого по тексту», иначе значения по умолчанию ---- */
+  /* сводим: приоритет у «частого по тексту», иначе значения по умолчанию */
   const font     = modeOf(fonts) || defFont;
   const szHalf   = modeOf(sizes) || defSz;       // размер в полуточках (half-points)
   const lineRaw  = modeOf(lines) || (defLine && (!defLineRule || defLineRule === 'auto') ? parseInt(defLine, 10) : null);
@@ -872,7 +1033,7 @@ async function readGostDocx(file){
   }
   if (firstRaw && firstRaw > 0){ const cm = Math.max(1, twipsToCm(firstRaw)); p.firstIndent = cm; rec.push('красная строка ' + cm + ' см'); }
 
-  /* ---- поля страницы: первый sectPr/pgMar ---- */
+  /* поля страницы: первый sectPr/pgMar */
   const sect = doc.getElementsByTagNameNS(NS.w, 'sectPr')[0];
   if (sect){
     const pg = firstChildLocal(sect, 'pgMar');
@@ -887,7 +1048,7 @@ async function readGostDocx(file){
     }
   }
 
-  /* ---- нумерация страниц: ищем поле PAGE в колонтитулах ---- */
+  /* нумерация страниц: ищем поле PAGE в колонтитулах */
   const num = detectPageNumber(zip);
   p.pageNumbers = num || 'Не добавлять';
   if (num) rec.push('нумерация — ' + num.toLowerCase());
@@ -912,7 +1073,7 @@ function detectPageNumber(zip){
   return bottom || top;     // низ приоритетнее (типичная нумерация)
 }
 
-/* ---- кнопка «Выбрать свой ГОСТ»: читает образец и заполняет форму ---- */
+/* кнопка «Выбрать свой ГОСТ»: читает образец и заполняет форму*/
 function initGostPicker(){
   const input = document.getElementById('gostInput');
   if (!input) return;

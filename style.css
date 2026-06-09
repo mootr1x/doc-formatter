@@ -1,11 +1,9 @@
-/* ============================================================
-   ТЕМЫ. Цвета вынесены в переменные; тема = переопределение.
+/* ТЕМЫ. Цвета вынесены в переменные; тема = переопределение.
    Активная тема ставится атрибутом data-theme на <html>:
      (нет атрибута)        -> Светлая (как было)
      data-theme="dark"     -> Тёмная
      data-theme="warm"     -> Тёплая (жемчужная)
-     data-theme="mono"     -> Чёрно-белая
-   ============================================================ */
+     data-theme="mono"     -> Чёрно-белая */
 :root{
   --bg:#f0f2f5;
   --text:#333;
@@ -319,7 +317,7 @@ h1 {
     color: var(--accent);
 }
 
-/* ---- Быстрая настройка: пресеты + описание словами ---- */
+/* Быстрая настройка: пресеты + описание словами */
 .quick-section {
     margin-bottom: 20px;
 }
@@ -402,7 +400,7 @@ h1 {
     color: var(--err);
 }
 
-/* ---- Двухколоночная раскладка: основная карточка + карточка ГОСТ справа ---- */
+/* Двухколоночная раскладка: основная карточка + карточка ГОСТ справа */
 .layout {
     display: grid;
     grid-template-columns: minmax(0, 700px) 250px;
@@ -515,7 +513,7 @@ h1 {
     margin-top: 20px;
     padding-top: 20px;
 }
-/* ---- кнопка «Выбрать свой ГОСТ» в боковой карточке ---- */
+/* кнопка «Выбрать свой ГОСТ» в боковой карточке */
 .gost-upload {
     display: flex;
     flex-direction: column;
@@ -534,4 +532,69 @@ h1 {
     text-align: center;
     min-height: 14px;
     word-break: break-all;
+}
+/* две кнопки сохранения в ряд */
+.button-row {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+}
+.button-row .apply-btn {
+    margin-top: 0;
+    flex: 1;
+}
+.pdf-note {
+    font-size: 11.5px;
+    color: var(--filename);
+    margin-top: 8px;
+    line-height: 1.45;
+}
+
+.button-row .btn-word {
+    background: #2b579a;            /* синий Word */
+    color: #fff;
+}
+.button-row .btn-word:hover {
+    background: #244a85;
+}
+.button-row .btn-pdf {
+    background: #c0392b;            /* красный PDF */
+    color: #fff;
+}
+.button-row .btn-pdf:hover {
+    background: #a5311f;
+}
+
+/* чёрно-белая тема — возвращаем монохром (как у остальных кнопок) */
+[data-theme="mono"] .button-row .btn-word,
+[data-theme="mono"] .button-row .btn-pdf {
+    background: var(--accent);
+    color: var(--on-accent);
+}
+[data-theme="mono"] .button-row .btn-word:hover,
+[data-theme="mono"] .button-row .btn-pdf:hover {
+    background: var(--accent-hover);
+}
+
+/* контейнер рендера для PDF: вне экрана, виден только при печати */
+#pdfRenderArea {
+    position: absolute;
+    left: -99999px;
+    top: 0;
+    width: 210mm;
+    background: #fff;
+}
+
+@media print {
+    body { padding: 0; background: #fff; }
+    body * { visibility: hidden; }
+    #pdfRenderArea, #pdfRenderArea * { visibility: visible; }
+    #pdfRenderArea {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: auto;
+    }
+    /* поля задаёт сам документ (отступы страниц docx-preview), а не принтер */
+    @page { margin: 0; }
 }
