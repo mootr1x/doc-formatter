@@ -400,39 +400,39 @@ h1 {
     color: var(--err);
 }
 
-/* Двухколоночная раскладка: основная карточка + карточка ГОСТ справа */
+/* Раскладка: левая колонка строго по центру страницы,
+   ГОСТ — абсолютно справа от неё, не влияет на центровку */
 .layout {
-    display: grid;
-    grid-template-columns: minmax(0, 700px) 250px;
-    grid-template-rows: auto auto;
-    gap: 20px;
+    position: relative;
+    display: flex;
     justify-content: center;
-    align-items: start;
-    max-width: 990px;
-    margin: 0 auto;
+    align-items: flex-start;
+    padding: 0 20px;
+}
+
+.layout-left {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 100%;
+    max-width: 700px;
 }
 
 .layout > .main-form {
-    grid-column: 1;
-    grid-row: 1;
     max-width: none;
     margin: 0;
 }
 
 .layout > .side-card {
-    grid-column: 2;
-    grid-row: 1 / 3;
-    align-self: start;
-    position: sticky;
-    top: 20px;
-    max-width: none;
+    position: absolute;
+    left: calc(50% + 350px + 20px);
+    top: 0;
+    width: 250px;
     margin: 0;
     padding: 24px 20px;
 }
 
 .layout > .template-section {
-    grid-column: 1;
-    grid-row: 2;
     max-width: none;
     margin: 0;
 }
@@ -468,27 +468,28 @@ h1 {
 /* узкие экраны: одна колонка, карточка ГОСТ уходит вниз под основную */
 @media (max-width: 880px) {
     .layout {
-        grid-template-columns: 1fr;
-        grid-template-rows: none;
-        max-width: 700px;
+        flex-direction: column;
+        align-items: stretch;
+        padding: 0;
     }
-    .layout > .main-form,
-    .layout > .side-card,
-    .layout > .template-section {
-        grid-column: 1;
-        grid-row: auto;
+    .layout-left {
+        max-width: none;
     }
     .layout > .side-card {
         position: static;
+        left: auto;
         top: auto;
+        width: auto;
     }
-    /* на мобильном — кнопки в ряд с переносом */
+    /* на мобильном — кнопки в ряд одинакового размера */
     .preset-col {
         flex-direction: row;
         flex-wrap: wrap;
     }
     .preset-col .preset-btn {
+        flex: 1 1 calc(50% - 4px);  /* две в ряд, одинаковая ширина */
         width: auto;
+        min-width: 0;
     }
 }
 
@@ -585,7 +586,59 @@ h1 {
     background: #fff;
 }
 
+
+/* ── Футер ───────────────────────────────────────────────── */
+.site-footer {
+    max-width: 990px;
+    margin: 24px auto 0;
+    padding: 0 0 24px;
+}
+
+.site-footer__inner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 6px 10px;
+    font-size: 12.5px;
+    color: var(--filename);
+    border-top: 1px solid var(--tabline);
+    padding-top: 16px;
+}
+
+.site-footer__link {
+    color: var(--muted);
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.site-footer__link:hover {
+    color: var(--accent);
+}
+
+.site-footer__github {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.site-footer__github-icon {
+    flex-shrink: 0;
+    vertical-align: middle;
+}
+
+.site-footer__sep {
+    color: var(--tabline);
+    user-select: none;
+}
+
+.site-footer__version {
+    color: var(--filename);
+}
+
+
 @media print {
+    .site-footer { display: none; }
     body { padding: 0; background: #fff; }
     body * { visibility: hidden; }
     #pdfRenderArea, #pdfRenderArea * { visibility: visible; }

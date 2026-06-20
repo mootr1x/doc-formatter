@@ -17,6 +17,7 @@
 </head>
 <body>
     <div class="layout">
+    <div class="layout-left">
     <div class="container main-form">
         <!-- Переключатель тем -->
         <div class="theme-switch">
@@ -179,6 +180,19 @@
         <div id="status" class="status"></div>
     </div>
 
+    <!-- Скачать шаблон с макросом — внутри левой колонки -->
+    <div class="container template-section">
+        <label class="section-title">Офлайн-версия</label>
+        <div class="template-block">
+            <p class="template-desc">Word-документ со встроенным макросом — прототип этого сайта для работы без интернета. Не поддерживает работу PDF.</p>
+            <a href="AutoFormatter.docm" download class="apply-btn template-btn">
+                Скачать шаблон с макросом
+            </a>
+        </div>
+    </div>
+
+    </div><!-- /layout-left -->
+
     <!-- Карточка с пресетами ГОСТ — справа от основной -->
     <aside class="container side-card">
         <label class="section-title">Стандарты ГОСТ</label>
@@ -210,18 +224,20 @@
         </div>
 
     </aside>
+    </div><!-- /layout -->
 
-    <!-- Скачать шаблон с макросом — отдельная карточка -->
-    <div class="container template-section">
-        <label class="section-title">Офлайн-версия</label>
-        <div class="template-block">
-            <p class="template-desc">Word-документ со встроенным макросом — прототип этого сайта для работы без интернета. Не поддерживает работу PDF.</p>
-            <a href="AutoFormatter.docm" download class="apply-btn template-btn">
-                Скачать шаблон с макросом
+    <!-- Футер -->
+    <footer class="site-footer">
+        <div class="site-footer__inner">
+            <span class="site-footer__author">
+                Сделал <a href="https://github.com/mootr1x" target="_blank" rel="noopener" class="site-footer__link">@mootr1x</a>
+            </span>
             </a>
+            <span class="site-footer__sep" aria-hidden="true">·</span>
+            <a href="https://vk.com/mottr1x" class="site-footer__link">Написать автору</a>
+            <span class="site-footer__sep" aria-hidden="true">·</span>
         </div>
-    </div>
-    </div>
+    </footer>
 
     <!-- скрытый контейнер: сюда docx-preview рисует документ, затем печать → PDF -->
     <div id="pdfRenderArea" aria-hidden="true"></div>
