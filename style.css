@@ -26,6 +26,8 @@
   --tabline:#f0f2f5;
   --ok:#2ecc71;
   --err:#e74c3c;
+  --pattern-color:rgba(0,0,0,0.07);
+  --pattern-svg:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Cpolygon points='40,2 78,40 40,78 2,40' fill='none' stroke='%23000' stroke-opacity='0.1' stroke-width='1'/%3E%3Cpolygon points='40,20 60,40 40,60 20,40' fill='none' stroke='%23000' stroke-opacity='0.07' stroke-width='0.75'/%3E%3C/svg%3E");
 }
 
 /* Тёмная — та же фиолетовая тема на тёмном фоне */
@@ -51,6 +53,8 @@
   --tabline:#2a2a3d;
   --ok:#52d98a;
   --err:#ff6b5e;
+  --pattern-color:rgba(255,255,255,0.05);
+  --pattern-svg:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Cpolygon points='40,2 78,40 40,78 2,40' fill='none' stroke='%23fff' stroke-opacity='0.08' stroke-width='1'/%3E%3Cpolygon points='40,20 60,40 40,60 20,40' fill='none' stroke='%23fff' stroke-opacity='0.05' stroke-width='0.75'/%3E%3C/svg%3E");
 }
 
 /* Тёплая — жемчужно-белый #eae6ca с тёплым акцентом */
@@ -76,6 +80,8 @@
   --tabline:#ddd3b0;
   --ok:#5a8a4a;
   --err:#b5503a;
+  --pattern-color:rgba(100,80,30,0.09);
+  --pattern-svg:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Cpolygon points='40,2 78,40 40,78 2,40' fill='none' stroke='%23786040' stroke-opacity='0.12' stroke-width='1'/%3E%3Cpolygon points='40,20 60,40 40,60 20,40' fill='none' stroke='%23786040' stroke-opacity='0.08' stroke-width='0.75'/%3E%3C/svg%3E");
 }
 
 /* Чёрно-белая — монохром */
@@ -101,6 +107,8 @@
   --tabline:#e0e0e0;
   --ok:#000;
   --err:#000;
+  --pattern-color:rgba(0,0,0,0.06);
+  --pattern-svg:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Cpolygon points='40,2 78,40 40,78 2,40' fill='none' stroke='%23000' stroke-opacity='0.08' stroke-width='1'/%3E%3Cpolygon points='40,20 60,40 40,60 20,40' fill='none' stroke='%23000' stroke-opacity='0.05' stroke-width='0.75'/%3E%3C/svg%3E");
 }
 
 * {
@@ -115,6 +123,19 @@ body {
     color: var(--text);
     padding: 20px;
     transition: background 0.25s ease, color 0.25s ease;
+    position: relative;
+}
+
+body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image: var(--pattern-svg);
+    background-size: 80px 80px;
+    background-repeat: repeat;
+    transition: background-image 0.25s ease;
 }
 
 .container {
@@ -125,6 +146,8 @@ body {
     padding: 30px;
     box-shadow: 0 4px 20px var(--card-shadow);
     transition: background 0.25s ease, box-shadow 0.25s ease;
+    position: relative;
+    z-index: 1;
 }
 
 h1 {
@@ -408,6 +431,7 @@ h1 {
     justify-content: center;
     align-items: flex-start;
     padding: 0 20px;
+    z-index: 1;
 }
 
 .layout-left {
@@ -592,6 +616,8 @@ h1 {
     max-width: 990px;
     margin: 24px auto 0;
     padding: 0 0 24px;
+    position: relative;
+    z-index: 1;
 }
 
 .site-footer__inner {
